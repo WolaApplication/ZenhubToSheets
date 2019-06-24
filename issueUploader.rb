@@ -4,10 +4,25 @@ require "json"
 require 'dotenv/load'
 require "net/http"
 
+require "google/apis/sheets_v4"
+require "googleauth"
+require "googleauth/stores/file_token_store"
+require "fileutils"
+
+OOB_URI = "urn:ietf:wg:oauth:2.0:oob".freeze
+APPLICATION_NAME = "issueUploader".freeze
+CREDENTIALS_PATH = "credentials.json".freeze
+# The file token.yaml stores the user's access and refresh tokens, and is
+# created automatically when the authorization flow completes for the first
+# time.
+TOKEN_PATH = "token.yaml".freeze
+SCOPE = Google::Apis::SheetsV4::AUTH_SPREADSHEETS_READONLY
+
+
 def issues
   url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board'
-  uri = URI(url)
   issues = Array.new
+  uri = URI(url)
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true)  do |http|
     request = Net::HTTP::Get.new(uri)
     request['Content-Type'] = 'application/json'
@@ -17,15 +32,77 @@ def issues
   end
 
   board = JSON.parse(response.body)
-
   board["pipelines"].each do |columns|
-    if columns["name"] == "Icebox"
+    if columns["name"] == "Backlog"
       columns["issues"].each do |issue|
-        issues.push(issue['issue_number']) 
+        issues.push(issue['issue_number'])
       end
     end
   end
   issues
+end
+
+def sendDataToGoogleSheest(namesAndUrls)
+  # Initialize the API
+  service = Google::Apis::SheetsV4::SheetsService.new
+  service.client_options.application_name = APPLICATION_NAME
+  service.authorization = authorize
+
+  # Prints the names and majors of students in a sample spreadsheet:
+  # https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+  # Hemos usado la URL https://docs.google.com/spreadsheets/d/104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4/edit#gid=0 y hemos sacado el id de ella
+  spreadsheet_id = "104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4"
+  range_name = "Hoja 1!A1"
+  value_input_option = 'USER_ENTERED'
+  values = Array.new(namesAndUrls.length){Array.new(1)}
+  iterator = 0
+  namesAndUrls.each do |key, value, iterator|
+    # =HYPERLINK("www.google.es";"hola")
+    values[iterator] << "=HYPERLINK(#{value};#{key})"
+    #values.push("=HYPERLINK(#{value};#{key})")
+    iterator = iterator + 1
+  end
+
+  values.each do |row|
+    puts row.inspect
+  end
+  data = [
+    {
+      range: range_name,
+      values: values
+    },
+  ]
+  value_range_object = Google::Apis::SheetsV4::ValueRange.new(range: range_name,
+                                                              values: values)
+  result = service.update_spreadsheet_value(spreadsheet_id,
+                                            range_name,
+                                            value_range_object,
+                                            value_input_option: value_input_option)
+  puts "#{result.updated_cells} cells updated."
+end
+
+##
+# Ensure valid credentials, either by restoring from the saved credentials
+# files or intitiating an OAuth2 authorization. If authorization is required,
+# the user's default browser will be launched to approve the request.
+#
+# @return [Google::Auth::UserRefreshCredentials] OAuth2 credentials
+def authorize
+  client_id = Google::Auth::ClientId.from_file CREDENTIALS_PATH
+  token_store = Google::Auth::Stores::FileTokenStore.new file: TOKEN_PATH
+  authorizer = Google::Auth::UserAuthorizer.new client_id, SCOPE, token_store
+  user_id = "default"
+  credentials = authorizer.get_credentials user_id
+  if credentials.nil?
+    url = authorizer.get_authorization_url base_url: OOB_URI
+    puts "Open the following URL in the browser and enter the " \
+         "resulting code after authorization:\n" + url
+    code = gets
+    credentials = authorizer.get_and_store_credentials_from_code(
+      user_id: user_id, code: code, base_url: OOB_URI
+    )
+  end
+  credentials
 end
 
 def issue_url(issue)
@@ -43,12 +120,13 @@ def issue_name(issue)
     http.request(request)
   end
   issue = JSON.parse(response.body)
-  puts issue['title']
+  issue['title']
 
 end
 
+namesAndUrls = Hash.new
 issues.each do |issue|
-  # Insert each element in a dictionary
-  issue_url(issue)
-  issue_name(issue)
+  namesAndUrls[issue_name(issue)] = issue_url(issue)
 end
+
+sendDataToGoogleSheest(namesAndUrls)
