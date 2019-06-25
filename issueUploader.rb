@@ -16,8 +16,16 @@ CREDENTIALS_PATH = "credentials.json".freeze
 # created automatically when the authorization flow completes for the first
 # time.
 TOKEN_PATH = "token.yaml".freeze
-SCOPE = Google::Apis::SheetsV4::AUTH_SPREADSHEETS_READONLY
+SCOPE = Google::Apis::SheetsV4::AUTH_SPREADSHEETS
 
+def generate_payload(namesAndUrls)
+  payload = Array.new(namesAndUrls.length){Array.new(1){0}}
+  namesAndUrls.each_with_index do |hash, index|
+    flat_hash = [*hash]
+    payload[index] = %(=HYPERLINK("#{flat_hash[1]}";"#{flat_hash[0]}"))
+  end
+  payload
+end
 
 def issues
   url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board'
@@ -42,44 +50,6 @@ def issues
   issues
 end
 
-def sendDataToGoogleSheest(namesAndUrls)
-  # Initialize the API
-  service = Google::Apis::SheetsV4::SheetsService.new
-  service.client_options.application_name = APPLICATION_NAME
-  service.authorization = authorize
-
-  # Prints the names and majors of students in a sample spreadsheet:
-  # https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-  # Hemos usado la URL https://docs.google.com/spreadsheets/d/104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4/edit#gid=0 y hemos sacado el id de ella
-  spreadsheet_id = "104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4"
-  range_name = "Hoja 1!A1"
-  value_input_option = 'USER_ENTERED'
-  values = Array.new(namesAndUrls.length){Array.new(1)}
-  iterator = 0
-  namesAndUrls.each do |key, value, iterator|
-    # =HYPERLINK("www.google.es";"hola")
-    values[iterator] << "=HYPERLINK(#{value};#{key})"
-    #values.push("=HYPERLINK(#{value};#{key})")
-    iterator = iterator + 1
-  end
-
-  values.each do |row|
-    puts row.inspect
-  end
-  data = [
-    {
-      range: range_name,
-      values: values
-    },
-  ]
-  value_range_object = Google::Apis::SheetsV4::ValueRange.new(range: range_name,
-                                                              values: values)
-  result = service.update_spreadsheet_value(spreadsheet_id,
-                                            range_name,
-                                            value_range_object,
-                                            value_input_option: value_input_option)
-  puts "#{result.updated_cells} cells updated."
-end
 
 ##
 # Ensure valid credentials, either by restoring from the saved credentials
@@ -105,6 +75,34 @@ def authorize
   credentials
 end
 
+def sendDataToGoogleSheest(namesAndUrls)
+  # Initialize the API
+  service = Google::Apis::SheetsV4::SheetsService.new
+  service.client_options.application_name = APPLICATION_NAME
+  service.authorization = authorize
+
+  # Prints the names and majors of students in a sample spreadsheet:
+  # https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+  # Hemos usado la URL https://docs.google.com/spreadsheets/d/104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4/edit#gid=0 y hemos sacado el id de ella
+  spreadsheet_id = "104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4"
+  range_name = "Hoja 1!A1"
+  value_input_option = 'USER_ENTERED'
+  values = generate_payload(namesAndUrls)
+  data = [
+    {
+      range: range_name,
+      values: values
+    },
+  ]
+  value_range_object = Google::Apis::SheetsV4::ValueRange.new(range: range_name,
+                                                              values: values)
+  result = service.update_spreadsheet_value(spreadsheet_id,
+                                            range_name,
+                                            value_range_object,
+                                            value_input_option: value_input_option)
+  puts "#{result.updated_cells} cells updated."
+end
+
 def issue_url(issue)
   "https://app.zenhub.com/workspaces/wola-5cb0b30b1be1263b113a0ec6/issues/wolaapplication/wola_maps_android/#{issue}"
 end
@@ -128,5 +126,7 @@ namesAndUrls = Hash.new
 issues.each do |issue|
   namesAndUrls[issue_name(issue)] = issue_url(issue)
 end
+p generate_payload(namesAndUrls)
 
-sendDataToGoogleSheest(namesAndUrls)
+
+#sendDataToGoogleSheest(namesAndUrls)
