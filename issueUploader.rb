@@ -22,7 +22,7 @@ def generate_payload(namesAndUrls)
   payload = Array.new(namesAndUrls.length){Array.new(1){0}}
   namesAndUrls.each_with_index do |hash, index|
     flat_hash = [*hash]
-    payload[index] = %(=HYPERLINK("#{flat_hash[1]}";"#{flat_hash[0]}"))
+    payload[index] << %(=HYPERLINK("#{flat_hash[1]}";"#{flat_hash[0]}"))
   end
   payload
 end
@@ -41,7 +41,7 @@ def issues
 
   board = JSON.parse(response.body)
   board["pipelines"].each do |columns|
-    if columns["name"] == "Backlog"
+    if columns["name"] == "Icebox"
       columns["issues"].each do |issue|
         issues.push(issue['issue_number'])
       end
@@ -126,7 +126,7 @@ namesAndUrls = Hash.new
 issues.each do |issue|
   namesAndUrls[issue_name(issue)] = issue_url(issue)
 end
-p generate_payload(namesAndUrls)
+#puts generate_payload(namesAndUrls)
 
 
-#sendDataToGoogleSheest(namesAndUrls)
+sendDataToGoogleSheest(namesAndUrls)
