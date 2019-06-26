@@ -19,7 +19,7 @@ TOKEN_PATH = "token.yaml".freeze
 SCOPE = Google::Apis::SheetsV4::AUTH_SPREADSHEETS
 
 def generate_payload(namesAndUrls)
-  payload = Array.new(namesAndUrls.length){Array.new(1){0}}
+  payload = Array.new(namesAndUrls.length){Array.new(1){" "}}
   namesAndUrls.each_with_index do |hash, index|
     flat_hash = [*hash]
     payload[index] << %(=HYPERLINK("#{flat_hash[1]}";"#{flat_hash[0]}"))
@@ -28,7 +28,7 @@ def generate_payload(namesAndUrls)
 end
 
 def issues
-  url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board'
+  BOARD == 'android' ?  url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board' : url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/132564584/board' 
   issues = Array.new
   uri = URI(url)
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true)  do |http|
@@ -41,7 +41,7 @@ def issues
 
   board = JSON.parse(response.body)
   board["pipelines"].each do |columns|
-    if columns["name"] == "Icebox"
+    if columns["name"] == COLUMN
       columns["issues"].each do |issue|
         issues.push(issue['issue_number'])
       end
@@ -75,7 +75,7 @@ def authorize
   credentials
 end
 
-def sendDataToGoogleSheest(namesAndUrls)
+def sendDataToGoogleSheets(namesAndUrls)
   # Initialize the API
   service = Google::Apis::SheetsV4::SheetsService.new
   service.client_options.application_name = APPLICATION_NAME
@@ -104,11 +104,19 @@ def sendDataToGoogleSheest(namesAndUrls)
 end
 
 def issue_url(issue)
-  "https://app.zenhub.com/workspaces/wola-5cb0b30b1be1263b113a0ec6/issues/wolaapplication/wola_maps_android/#{issue}"
+  url = ''
+  if BOARD == 'android' then 
+    url = "https://app.zenhub.com/workspaces/wola-5cb0b30b1be1263b113a0ec6/issues/wolaapplication/wola_maps_android/#{issue}" 
+  elsif BOARD == 'ios' then
+    url = "https://app.zenhub.com/workspaces/wola-5cb0b30b1be1263b113a0ec6/issues/wolaapplication/wola_maps_ios/#{issue}" 
+  else abort_script
+  end
+  url
 end
 
 def issue_name(issue)
-  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_android/issues/#{issue}")
+  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_android/issues/#{issue}") if BOARD == 'android'
+  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_ios/issues/#{issue}") if BOARD == 'ios'
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
     request = Net::HTTP::Get.new(uri)
     request.basic_auth(ENV['github_username'], ENV['github_token'])
@@ -122,11 +130,22 @@ def issue_name(issue)
 
 end
 
+def abort_script
+abort('This program requires at least one parameter.
+Board: either iOS or Android
+The others are optional.
+Column: Defaults to Review/QA')  
+end
+
+abort_script if ARGV.length == 0
+# This value should be either Android or iOS
+BOARD = ARGV[0].downcase 
+ARGV.length == 2 ? COLUMN = ARGV[1] : COLUMN = 'Review/QA'
+abort_script if ARGV.length > 2
+
 namesAndUrls = Hash.new
 issues.each do |issue|
   namesAndUrls[issue_name(issue)] = issue_url(issue)
 end
-#puts generate_payload(namesAndUrls)
 
-
-sendDataToGoogleSheest(namesAndUrls)
+sendDataToGoogleSheets(namesAndUrls)
