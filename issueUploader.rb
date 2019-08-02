@@ -27,8 +27,9 @@ def generate_payload(namesAndUrls)
   payload
 end
 
+# TODO, hay que cambiar la URL según que proyecto es. Esta solamente comprueba la de wola
 def issues
-  BOARD == 'android' ?  url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board' : url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/132564584/board' 
+  PLATFORM == 'android' ?  url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board' : url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/132564584/board' 
   issues = Array.new
   uri = URI(url)
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true)  do |http|
@@ -103,20 +104,43 @@ def sendDataToGoogleSheets(namesAndUrls)
   puts "#{result.updated_cells} cells updated."
 end
 
-def issue_url(issue)
-  url = ''
-  if BOARD == 'android' then 
-    url = "https://app.zenhub.com/workspaces/wola-5cb0b30b1be1263b113a0ec6/issues/wolaapplication/wola_maps_android/#{issue}" 
-  elsif BOARD == 'ios' then
-    url = "https://app.zenhub.com/workspaces/wola-5cb0b30b1be1263b113a0ec6/issues/wolaapplication/wola_maps_ios/#{issue}" 
-  else abort_script
+def project_id
+  if PROJECT == 'wola' 
+    project_id = 'wola-5cb0b30b1be1263b113a0ec6'
+  elsif PROJECT == 'sister'
+    project_id = 'sister-5cffe9a440bac60294a06f36'
+  elsif PROJECT == 'wolaschools'
+    project_id = 'wola-schools-5cd435823cc1905bb9c3d564'
+  elsif PROJECT == 'wave'
+    project_id = 'wave-5cb0b0991be1263b113a0e8a'
+  else abort script
   end
-  url
+  project_id
 end
 
+def board
+  if PROJECT == 'wola' 
+    project_board = 'wola_maps'
+  elsif PROJECT == 'sister'
+    project_board = 'sister'
+  elsif PROJECT == 'wolaschools'
+    project_board = 'schools'
+  elsif PROJECT == 'wave'
+    project_board = 'wave'
+  else abort script
+  end
+  project_board
+end
+
+def issue_url(issue)
+  project = project_id
+  project_board = board
+  "https://app.zenhub.com/workspaces/#{project}/issues/wolaapplication/#{project_board}_#{PLATFORM}/#{issue}" 
+end
+
+# TODO: Falta controlar el repo del bug
 def issue_name(issue)
-  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_android/issues/#{issue}") if BOARD == 'android'
-  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_ios/issues/#{issue}") if BOARD == 'ios'
+  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_#{PLATFORM}/issues/#{issue}")
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
     request = Net::HTTP::Get.new(uri)
     request.basic_auth(ENV['github_username'], ENV['github_token'])
@@ -131,17 +155,22 @@ def issue_name(issue)
 end
 
 def abort_script
-abort('This program requires at least one parameter.
+abort('This program requires at least two parameters.
+Project: Wola, Sister, WolaSchools or Wave
 Board: either iOS or Android
 The others are optional.
 Column: Defaults to Review/QA')  
 end
 
 abort_script if ARGV.length == 0
+
+# This value can be either wola, Sister, WolaSchools or Wave
+PROJECT = ARGV[0].downcase 
+
 # This value should be either Android or iOS
-BOARD = ARGV[0].downcase 
-ARGV.length == 2 ? COLUMN = ARGV[1] : COLUMN = 'Review/QA'
-abort_script if ARGV.length > 2
+PLATFORM = ARGV[1].downcase 
+ARGV.length == 3 ? COLUMN = ARGV[2] : COLUMN = 'Review/QA'
+abort_script if ARGV.length > 3
 
 namesAndUrls = Hash.new
 issues.each do |issue|
