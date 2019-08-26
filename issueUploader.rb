@@ -118,7 +118,7 @@ def project_id
   project_id
 end
 
-def board
+def zenhub_board
   if PROJECT == 'wola' 
     project_board = 'wola_maps'
   elsif PROJECT == 'sister'
@@ -134,13 +134,30 @@ end
 
 def issue_url(issue)
   project = project_id
-  project_board = board
+  project_board = zenhub_board
   "https://app.zenhub.com/workspaces/#{project}/issues/wolaapplication/#{project_board}_#{PLATFORM}/#{issue}" 
 end
 
-# TODO: Falta controlar el repo del bug
+def github_project
+  if PROJECT == 'wola' 
+    project_board = 'wola_maps_'
+  elsif PROJECT == 'sister'
+    project_board = 'sister_'
+  elsif PROJECT == 'wolaschools' && PLATFORM == 'android'
+    project_board = 'schools_'
+  elsif PROJECT == 'wolaschools' && PLATFORM == 'ios'
+    project_board = 'wola_schools_'
+  elsif PROJECT == 'wave'
+    project_board = 'wave_'
+  else abort script
+  end
+  project_board
+
+end
+
 def issue_name(issue)
-  uri = URI("https://api.github.com/repos/WolaApplication/wola_maps_#{PLATFORM}/issues/#{issue}")
+  project_board = github_project
+  uri = URI("https://api.github.com/repos/WolaApplication/#{project_board}#{PLATFORM}/issues/#{issue}")
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
     request = Net::HTTP::Get.new(uri)
     request.basic_auth(ENV['github_username'], ENV['github_token'])
