@@ -27,9 +27,46 @@ def generate_payload(namesAndUrls)
   payload
 end
 
-# TODO, hay que cambiar la URL según que proyecto es. Esta solamente comprueba la de wola
+def zenhub_workspace_id
+  if PROJECT == 'wola' 
+    workspace_id = '5cb0b30b1be1263b113a0ec6'
+  elsif PROJECT == 'sister'
+    workspace_id = '5cffe9a440bac60294a06f36'
+  elsif PROJECT == 'wolaschools'
+    workspace_id = '5cd435823cc1905bb9c3d564'
+  elsif PROJECT == 'wave'
+    workspace_id = '5cb0b0991be1263b113a0e8a'
+  else abort script
+  end
+  workspace_id
+end
+
+def zenhub_repo_id
+  if PROJECT == 'wola' && PLATFORM == 'android'
+    repo_id = '131278619'
+  elsif PROJECT == 'wola' && PLATFORM == 'ios'
+    repo_id = '132564584'
+  elsif PROJECT == 'sister' && PLATFORM == 'android'
+    repo_id = '191421403'
+  elsif PROJECT == 'sister' && PLATFORM == 'ios'
+    repo_id = '191421547'
+  elsif PROJECT == 'wolaschools' && PLATFORM == 'android'
+    repo_id = '122591800'
+  elsif PROJECT == 'wolaschools' && PLATFORM == 'ios'
+    repo_id = '121603793'
+  elsif PROJECT == 'wave' && PLATFORM == 'android'
+    repo_id = '97030648'
+  elsif PROJECT == 'wave' && PLATFORM == 'ios'
+    repo_id = '97011462'
+  else abort script
+  end
+  repo_id
+end
+
 def issues
-  PLATFORM == 'android' ?  url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/131278619/board' : url = 'https://api.zenhub.io/p2/workspaces/5cb0b30b1be1263b113a0ec6/repositories/132564584/board' 
+  workspace_id = zenhub_workspace_id
+  repo_id = zenhub_repo_id
+  url = "https://api.zenhub.io/p2/workspaces/#{workspace_id}/repositories/#{repo_id}/board" 
   issues = Array.new
   uri = URI(url)
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true)  do |http|
