@@ -72,7 +72,7 @@ def issues
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true)  do |http|
     request = Net::HTTP::Get.new(uri)
     request['Content-Type'] = 'application/json'
-    request['X-Authentication-Token'] = ENV['token']
+    request['X-Authentication-Token'] = ENV['TOKEN']
 
     http.request(request)
   end
@@ -119,7 +119,6 @@ def sendDataToGoogleSheets(namesAndUrls)
   service.client_options.application_name = APPLICATION_NAME
   service.authorization = authorize
 
-  # Prints the names and majors of students in a sample spreadsheet:
   # https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
   # Hemos usado la URL https://docs.google.com/spreadsheets/d/104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4/edit#gid=0 y hemos sacado el id de ella
   spreadsheet_id = "104U6ZuIXaG_sic_FOmfME_eSS13uhFrjj3vTdQ6lgJ4"
@@ -197,7 +196,7 @@ def issue_name(issue)
   uri = URI("https://api.github.com/repos/WolaApplication/#{project_board}#{PLATFORM}/issues/#{issue}")
   response = Net::HTTP.start(uri.host, uri.port, :use_ssl => true) do |http|
     request = Net::HTTP::Get.new(uri)
-    request.basic_auth(ENV['github_username'], ENV['github_token'])
+    request.basic_auth(ENV['GITHUB_USERNAME'], ENV['GITHUB_TOKEN'])
     request['Content-Type'] = 'application/json'
     request['Accept'] = 'application/vnd.github.v3+json'
 
