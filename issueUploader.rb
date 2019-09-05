@@ -63,6 +63,8 @@ def zenhub_repo_id
   repo_id
 end
 
+# Gets the issues that are in the zenhub board and filters them to return only
+# the issues in the COLUMN column.
 def issues
   workspace_id = zenhub_workspace_id
   repo_id = zenhub_repo_id
@@ -180,7 +182,7 @@ def github_project
   elsif PROJECT == 'sister'
     project_board = 'sister_'
   elsif PROJECT == 'wolaschools' && PLATFORM == 'android'
-    project_board = 'schools_'
+    project_board = 'school_'
   elsif PROJECT == 'wolaschools' && PLATFORM == 'ios'
     project_board = 'wola_schools_'
   elsif PROJECT == 'wave'
