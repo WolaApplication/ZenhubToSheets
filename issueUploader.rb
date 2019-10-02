@@ -224,7 +224,7 @@ PROJECT = ARGV[0].downcase
 
 # This value should be either Android or iOS
 PLATFORM = ARGV[1].downcase 
-ARGV.length == 3 ? COLUMN = ARGV[2] : COLUMN = 'Review/QA'
+ARGV.length == 3 ? COLUMN = ARGV[2] : COLUMN = 'QA'
 abort_script if ARGV.length > 3
 
 namesAndUrls = Hash.new
